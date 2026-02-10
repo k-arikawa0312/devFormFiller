@@ -9,6 +9,8 @@ type InjectResponse =
 function App() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [nameSelector, setNameSelector] = useState("name");
+  const [emailSelector, setEmailSelector] = useState("email");
   const [autoSubmit, setAutoSubmit] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [details, setDetails] = useState<InjectionResult[] | null>(null);
@@ -26,21 +28,21 @@ function App() {
       fields: [
         {
           id: "fullName",
-          selector: "name",
+          selector: nameSelector,
           type: "text",
           valueStrategy: "static",
           staticValue: fullName,
         },
         {
           id: "email",
-          selector: "email",
+          selector: emailSelector,
           type: "email",
           valueStrategy: "static",
           staticValue: email,
         },
       ],
     };
-  }, [fullName, email, autoSubmit]);
+  }, [fullName, email, autoSubmit, nameSelector, emailSelector]);
 
   const handleInject = async () => {
     setIsRunning(true);
@@ -58,10 +60,10 @@ function App() {
         setStatus("注入が完了しました");
         setDetails(response.results);
       } else {
-        setStatus(`失敗: ${response.error}`);
+        setStatus(formatError(response.error));
       }
     } catch (error) {
-      setStatus(`失敗: ${String(error)}`);
+      setStatus(formatError(String(error)));
     } finally {
       setIsRunning(false);
     }
@@ -83,6 +85,13 @@ function App() {
             value={fullName}
             onChange={(event) => setFullName(event.target.value)}
           />
+          <input
+            className="selector"
+            type="text"
+            placeholder="セレクタ/属性（例: name, #fullName, [name=fullName]）"
+            value={nameSelector}
+            onChange={(event) => setNameSelector(event.target.value)}
+          />
         </label>
 
         <label className="field">
@@ -92,6 +101,13 @@ function App() {
             placeholder="email を持つ入力"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
+          />
+          <input
+            className="selector"
+            type="text"
+            placeholder="セレクタ/属性（例: email, #email, [name=email]）"
+            value={emailSelector}
+            onChange={(event) => setEmailSelector(event.target.value)}
           />
         </label>
 
@@ -155,10 +171,30 @@ async function sendMessageToTab(
           reject(new Error(chrome.runtime.lastError.message));
           return;
         }
+        if (!response) {
+          reject(new Error("no-response"));
+          return;
+        }
         resolve(response);
       },
     );
   });
+}
+
+function formatError(raw: string): string {
+  if (raw.includes("active-tab-not-found")) {
+    return "失敗: アクティブタブが見つかりません";
+  }
+
+  if (
+    raw.includes("Receiving end does not exist") ||
+    raw.includes("Could not establish connection") ||
+    raw.includes("no-response")
+  ) {
+    return "失敗: コンテンツスクリプト未注入です。対象ページが http/https か確認し、必要なら拡張機能を再読み込みしてください。file:// で検証中なら「ファイル URL へのアクセスを許可」を有効にしてください。";
+  }
+
+  return `失敗: ${raw}`;
 }
 
 export default App;
