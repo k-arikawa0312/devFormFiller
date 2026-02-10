@@ -3,6 +3,7 @@ import { injectPreset } from "./injector";
 import { pickElement } from "./picker";
 
 const PANEL_ID = "dev-form-filler-panel";
+const AUTO_OPEN_KEY = "autoOpenPanel";
 
 export function openPanel(): void {
   if (document.getElementById(PANEL_ID)) return;
@@ -132,6 +133,9 @@ export function openPanel(): void {
         font-size: 12px;
         color: #334155;
       }
+      .checkbox + .checkbox {
+        margin-top: -2px;
+      }
     </style>
     <div class="panel">
       <div class="header">
@@ -162,6 +166,11 @@ export function openPanel(): void {
           <span>入力後に送信</span>
         </label>
 
+        <label class="checkbox">
+          <input class="auto-open" type="checkbox" />
+          <span>自動でパネルを開く</span>
+        </label>
+
         <button class="primary inject" type="button">フォームに注入</button>
         <p class="status"></p>
         <ul class="results"></ul>
@@ -181,6 +190,7 @@ export function openPanel(): void {
   const results = shadow.querySelector<HTMLUListElement>(".results");
   const closeButton = shadow.querySelector<HTMLButtonElement>(".close");
   const injectButton = shadow.querySelector<HTMLButtonElement>(".inject");
+  const autoOpen = shadow.querySelector<HTMLInputElement>(".auto-open");
   const namePickButton = shadow.querySelector<HTMLButtonElement>(".name-pick");
   const emailPickButton =
     shadow.querySelector<HTMLButtonElement>(".email-pick");
@@ -195,12 +205,22 @@ export function openPanel(): void {
     !results ||
     !closeButton ||
     !injectButton ||
+    !autoOpen ||
     !namePickButton ||
     !emailPickButton
   ) {
     host.remove();
     return;
   }
+
+  chrome.storage.local.get([AUTO_OPEN_KEY], (data) => {
+    const value = data[AUTO_OPEN_KEY];
+    autoOpen.checked = typeof value === "boolean" ? value : true;
+  });
+
+  autoOpen.addEventListener("change", () => {
+    chrome.storage.local.set({ [AUTO_OPEN_KEY]: autoOpen.checked });
+  });
 
   const setStatus = (message: string) => {
     status.textContent = message;
