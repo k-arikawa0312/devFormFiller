@@ -8,7 +8,11 @@ export default defineManifest({
   permissions: ["storage", "activeTab", "scripting"],
   host_permissions: ["http://*/*", "https://*/*"],
   action: {
-    default_popup: "index.html",
+    default_title: "DevFormFiller Pro",
+  },
+  background: {
+    service_worker: "src/background/index.ts",
+    type: "module",
   },
   content_scripts: [
     {
