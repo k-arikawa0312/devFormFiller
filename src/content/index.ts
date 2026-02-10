@@ -3,6 +3,33 @@ import { injectPreset } from "./injector";
 import { pickElement } from "./picker";
 import { openPanel } from "./panel";
 
+const AUTO_OPEN_KEY = "autoOpenPanel";
+let panelOpened = false;
+
+function ensurePanelOpen() {
+  if (panelOpened) return;
+  panelOpened = true;
+  openPanel();
+}
+
+function autoOpenIfEnabled() {
+  chrome.storage.local.get([AUTO_OPEN_KEY], (data) => {
+    const value = data[AUTO_OPEN_KEY];
+    const enabled = typeof value === "boolean" ? value : true;
+    if (enabled) {
+      ensurePanelOpen();
+    }
+  });
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", () => {
+    requestAnimationFrame(autoOpenIfEnabled);
+  });
+} else {
+  requestAnimationFrame(autoOpenIfEnabled);
+}
+
 interface InjectMessage {
   type: "DEV_FORM_FILLER_INJECT";
   preset: FormPreset;
