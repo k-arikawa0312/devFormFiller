@@ -4,6 +4,7 @@ export default defineManifest({
   manifest_version: 3,
   name: "DevFormFiller Pro",
   version: "1.0.0",
+  description: "フォーム入力テストを自動化する開発者向け拡張機能",
   permissions: ["storage", "activeTab"],
   action: {
     default_popup: "index.html",
