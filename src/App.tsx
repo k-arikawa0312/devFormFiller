@@ -1,10 +1,23 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { FormPreset, InjectionResult } from "./lib/types";
 import "./App.css";
 
 type InjectResponse =
   | { ok: true; results: InjectionResult[] }
   | { ok: false; error: string };
+
+type PickResponse =
+  | { ok: true; result: { selector: string; label?: string } }
+  | { ok: false; error: string };
+
+type LastPick = {
+  target: "name" | "email";
+  result: { selector: string; label?: string };
+  timestamp: number;
+};
+
+const LAST_PICK_KEY = "lastPick";
+const LAST_PICK_TTL_MS = 2 * 60 * 1000;
 
 function App() {
   const [fullName, setFullName] = useState("");
@@ -15,6 +28,37 @@ function App() {
   const [status, setStatus] = useState<string | null>(null);
   const [details, setDetails] = useState<InjectionResult[] | null>(null);
   const [isRunning, setIsRunning] = useState(false);
+  const [isPicking, setIsPicking] = useState<"name" | "email" | null>(null);
+
+  useEffect(() => {
+    chrome.storage.local.get([LAST_PICK_KEY], (data) => {
+      const lastPick = data[LAST_PICK_KEY] as LastPick | undefined;
+      if (!lastPick) return;
+      if (Date.now() - lastPick.timestamp > LAST_PICK_TTL_MS) {
+        chrome.storage.local.remove([LAST_PICK_KEY]);
+        return;
+      }
+
+      if (lastPick.target === "name") {
+        if (lastPick.result.selector) {
+          setNameSelector(lastPick.result.selector);
+        }
+        if (!fullName && lastPick.result.label) {
+          setFullName(lastPick.result.label);
+        }
+      } else {
+        if (lastPick.result.selector) {
+          setEmailSelector(lastPick.result.selector);
+        }
+        if (!email && lastPick.result.label) {
+          setEmail(lastPick.result.label);
+        }
+      }
+
+      chrome.storage.local.remove([LAST_PICK_KEY]);
+      setStatus("要素を取得しました");
+    });
+  }, [email, fullName]);
 
   const preset = useMemo<FormPreset>(() => {
     return {
@@ -69,6 +113,25 @@ function App() {
     }
   };
 
+  const handlePick = async (target: "name" | "email") => {
+    setIsPicking(target);
+    setStatus("画面上で対象の入力欄をクリックしてください（Escで中止）");
+
+    try {
+      const tab = await getActiveTab();
+      if (!tab?.id) {
+        throw new Error("active-tab-not-found");
+      }
+
+      await sendPickMessage(tab.id, target);
+      setStatus("選択後にポップアップを開き直してください");
+    } catch (error) {
+      setStatus(formatError(String(error)));
+    } finally {
+      setIsPicking(null);
+    }
+  };
+
   return (
     <div className="popup">
       <header className="header">
@@ -85,13 +148,23 @@ function App() {
             value={fullName}
             onChange={(event) => setFullName(event.target.value)}
           />
-          <input
-            className="selector"
-            type="text"
-            placeholder="セレクタ/属性（例: name, #fullName, [name=fullName]）"
-            value={nameSelector}
-            onChange={(event) => setNameSelector(event.target.value)}
-          />
+          <div className="selector-row">
+            <input
+              className="selector"
+              type="text"
+              placeholder="セレクタ/属性（例: name, #fullName, [name=fullName]）"
+              value={nameSelector}
+              onChange={(event) => setNameSelector(event.target.value)}
+            />
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => handlePick("name")}
+              disabled={isRunning || isPicking !== null}
+            >
+              {isPicking === "name" ? "選択中..." : "画面から選択"}
+            </button>
+          </div>
         </label>
 
         <label className="field">
@@ -102,13 +175,23 @@ function App() {
             value={email}
             onChange={(event) => setEmail(event.target.value)}
           />
-          <input
-            className="selector"
-            type="text"
-            placeholder="セレクタ/属性（例: email, #email, [name=email]）"
-            value={emailSelector}
-            onChange={(event) => setEmailSelector(event.target.value)}
-          />
+          <div className="selector-row">
+            <input
+              className="selector"
+              type="text"
+              placeholder="セレクタ/属性（例: email, #email, [name=email]）"
+              value={emailSelector}
+              onChange={(event) => setEmailSelector(event.target.value)}
+            />
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => handlePick("email")}
+              disabled={isRunning || isPicking !== null}
+            >
+              {isPicking === "email" ? "選択中..." : "画面から選択"}
+            </button>
+          </div>
         </label>
 
         <label className="checkbox">
@@ -167,6 +250,29 @@ async function sendMessageToTab(
       tabId,
       { type: "DEV_FORM_FILLER_INJECT", preset },
       (response: InjectResponse) => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+          return;
+        }
+        if (!response) {
+          reject(new Error("no-response"));
+          return;
+        }
+        resolve(response);
+      },
+    );
+  });
+}
+
+async function sendPickMessage(
+  tabId: number,
+  target: "name" | "email",
+): Promise<PickResponse> {
+  return new Promise((resolve, reject) => {
+    chrome.tabs.sendMessage(
+      tabId,
+      { type: "DEV_FORM_FILLER_PICK", target },
+      (response: PickResponse) => {
         if (chrome.runtime.lastError) {
           reject(new Error(chrome.runtime.lastError.message));
           return;
