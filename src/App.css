@@ -8,16 +8,6 @@
   color: #1f2937;
   background: #ffffff;
 }
-.popup {
-  width: 320px;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  font-family: "Inter", system-ui, sans-serif;
-  color: #1f2937;
-  background: #ffffff;
-}
 
 .header h1 {
   font-size: 18px;
@@ -106,6 +96,16 @@
   cursor: not-allowed;
 }
 
+.ghost {
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #334155;
+  font-size: 12px;
+  cursor: pointer;
+}
+
 .status {
   margin: 0;
   font-size: 12px;
@@ -123,25 +123,6 @@
   color: #4b5563;
 }
 
-.results li {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.ok {
-  color: #16a34a;
-  font-weight: 600;
-}
-
-.ng {
-  color: #dc2626;
-  font-weight: 600;
-}
-
-.reason {
-  color: #9ca3af;
-}
 .results li {
   display: flex;
   align-items: center;

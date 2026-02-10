@@ -10,6 +10,8 @@ type PickResponse =
   | { ok: true; result: { selector: string; label?: string } }
   | { ok: false; error: string };
 
+type OpenPanelResponse = { ok: true } | { ok: false; error: string };
+
 type LastPick = {
   target: "name" | "email";
   result: { selector: string; label?: string };
@@ -132,6 +134,19 @@ function App() {
     }
   };
 
+  const handleOpenPanel = async () => {
+    try {
+      const tab = await getActiveTab();
+      if (!tab?.id) {
+        throw new Error("active-tab-not-found");
+      }
+      await sendOpenPanelMessage(tab.id);
+      setStatus("フローティングパネルを表示しました");
+    } catch (error) {
+      setStatus(formatError(String(error)));
+    }
+  };
+
   return (
     <div className="popup">
       <header className="header">
@@ -208,6 +223,10 @@ function App() {
         {isRunning ? "実行中..." : "フォームに注入"}
       </button>
 
+      <button className="ghost" onClick={handleOpenPanel}>
+        フローティングパネルを開く
+      </button>
+
       {status && <p className="status">{status}</p>}
 
       {details && (
@@ -273,6 +292,26 @@ async function sendPickMessage(
       tabId,
       { type: "DEV_FORM_FILLER_PICK", target },
       (response: PickResponse) => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+          return;
+        }
+        if (!response) {
+          reject(new Error("no-response"));
+          return;
+        }
+        resolve(response);
+      },
+    );
+  });
+}
+
+async function sendOpenPanelMessage(tabId: number): Promise<OpenPanelResponse> {
+  return new Promise((resolve, reject) => {
+    chrome.tabs.sendMessage(
+      tabId,
+      { type: "DEV_FORM_FILLER_OPEN_PANEL" },
+      (response: OpenPanelResponse) => {
         if (chrome.runtime.lastError) {
           reject(new Error(chrome.runtime.lastError.message));
           return;
