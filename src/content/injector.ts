@@ -162,9 +162,11 @@ function findByInputType(
 function findByAriaLabel(
   selector: string,
 ): HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null {
-  return document.querySelector(
-    `[aria-label="${cssEscape(selector)}"]`,
-  ) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null;
+  return document.querySelector(`[aria-label="${cssEscape(selector)}"]`) as
+    | HTMLInputElement
+    | HTMLSelectElement
+    | HTMLTextAreaElement
+    | null;
 }
 
 function findByDataAttributes(
