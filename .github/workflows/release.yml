@@ -1,0 +1,62 @@
+name: Build and Release Extension
+
+on:
+  push:
+    branches: ["main"] # mainにプッシュされたらビルドチェック
+  pull_request:
+    branches: ["main"]
+  release:
+    types: [created] # GitHub上でReleaseを作成したら自動実行
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build extension
+        run: npm run build # distフォルダが生成される
+
+      # 成果物を一時的に保存（ビルド失敗を防ぐためのチェック用）
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  # リリース時のみ実行されるジョブ
+  release:
+    needs: build
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install and Build
+        run: |
+          npm ci
+          npm run build
+
+      # distフォルダをZIP化
+      - name: Zip extension
+        run: zip -r dev-form-filler.zip dist/*
+
+      # GitHub ReleaseにZIPをアップロード
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dev-form-filler.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
