@@ -10,6 +10,7 @@ export default defineManifest({
   action: {
     default_title: "DevFormFiller Pro",
   },
+  options_page: "options.html",
   background: {
     service_worker: "src/background/index.ts",
     type: "module",
