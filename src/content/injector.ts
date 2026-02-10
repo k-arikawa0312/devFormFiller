@@ -76,9 +76,53 @@ export function injectField(rule: FieldRule): InjectionResult {
 function findElement(
   selector: string,
 ): HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null {
+  const trimmed = selector.trim();
+  if (!trimmed) return null;
+
   const byCss = safeQuerySelector(selector);
   if (byCss) return byCss;
 
+  const byExact = findByExactAttributes(trimmed);
+  if (byExact) return byExact;
+
+  const byType = findByInputType(trimmed);
+  if (byType) return byType;
+
+  const byAria = findByAriaLabel(trimmed);
+  if (byAria) return byAria;
+
+  const byData = findByDataAttributes(trimmed);
+  if (byData) return byData;
+
+  const byLabel = findByLabelText(trimmed);
+  if (byLabel) return byLabel;
+
+  const byPartial = findByPartialAttributes(trimmed);
+  if (byPartial) return byPartial;
+
+  const byLabelPartial = findByLabelContains(trimmed);
+  if (byLabelPartial) return byLabelPartial;
+
+  return null;
+}
+
+function safeQuerySelector(
+  selector: string,
+): HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null {
+  try {
+    return document.querySelector(selector) as
+      | HTMLInputElement
+      | HTMLSelectElement
+      | HTMLTextAreaElement
+      | null;
+  } catch {
+    return null;
+  }
+}
+
+function findByExactAttributes(
+  selector: string,
+): HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null {
   const byName = document.querySelector(`[name="${cssEscape(selector)}"]`) as
     | HTMLInputElement
     | HTMLSelectElement
@@ -98,24 +142,39 @@ function findElement(
   ) as HTMLInputElement | HTMLTextAreaElement | null;
   if (byPlaceholder) return byPlaceholder;
 
-  const byLabel = findByLabelText(selector);
-  if (byLabel) return byLabel;
+  const byAutocomplete = document.querySelector(
+    `[autocomplete="${cssEscape(selector)}"]`,
+  ) as HTMLInputElement | HTMLTextAreaElement | null;
+  if (byAutocomplete) return byAutocomplete;
 
   return null;
 }
 
-function safeQuerySelector(
+function findByInputType(
   selector: string,
 ): HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null {
-  try {
-    return document.querySelector(selector) as
-      | HTMLInputElement
-      | HTMLSelectElement
-      | HTMLTextAreaElement
-      | null;
-  } catch {
-    return null;
-  }
+  if (!isSimpleToken(selector)) return null;
+  return document.querySelector(
+    `input[type="${cssEscape(selector)}"]`,
+  ) as HTMLInputElement | null;
+}
+
+function findByAriaLabel(
+  selector: string,
+): HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null {
+  return document.querySelector(
+    `[aria-label="${cssEscape(selector)}"]`,
+  ) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null;
+}
+
+function findByDataAttributes(
+  selector: string,
+): HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null {
+  return document.querySelector(
+    `[data-testid="${cssEscape(selector)}"], [data-test="${cssEscape(
+      selector,
+    )}"]`,
+  ) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null;
 }
 
 function findByLabelText(
@@ -142,6 +201,68 @@ function findByLabelText(
       | HTMLTextAreaElement
       | null;
     if (controlInLabel) return controlInLabel;
+  }
+
+  return null;
+}
+
+function findByLabelContains(
+  text: string,
+): HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null {
+  const labels = Array.from(document.querySelectorAll("label"));
+  for (const label of labels) {
+    const labelText = (label.textContent || "").trim();
+    if (!labelText) continue;
+    if (!normalizeText(labelText).includes(normalizeText(text))) continue;
+
+    const controlByFor = label.htmlFor
+      ? (document.getElementById(label.htmlFor) as
+          | HTMLInputElement
+          | HTMLSelectElement
+          | HTMLTextAreaElement
+          | null)
+      : null;
+    if (controlByFor) return controlByFor;
+
+    const controlInLabel = label.querySelector("input, select, textarea") as
+      | HTMLInputElement
+      | HTMLSelectElement
+      | HTMLTextAreaElement
+      | null;
+    if (controlInLabel) return controlInLabel;
+  }
+
+  return null;
+}
+
+function findByPartialAttributes(
+  selector: string,
+): HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null {
+  const normalized = normalizeText(selector);
+  const candidates = Array.from(
+    document.querySelectorAll("input, textarea, select"),
+  ) as Array<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>;
+
+  for (const element of candidates) {
+    const placeholder = element.getAttribute("placeholder");
+    if (placeholder && normalizeText(placeholder).includes(normalized)) {
+      return element;
+    }
+
+    const ariaLabel = element.getAttribute("aria-label");
+    if (ariaLabel && normalizeText(ariaLabel).includes(normalized)) {
+      return element;
+    }
+
+    const name = element.getAttribute("name");
+    if (name && normalizeText(name).includes(normalized)) {
+      return element;
+    }
+
+    const id = element.getAttribute("id");
+    if (id && normalizeText(id).includes(normalized)) {
+      return element;
+    }
   }
 
   return null;
@@ -235,6 +356,10 @@ function fuzzyEquals(a: string, b: string): boolean {
 
 function normalizeText(value: string): string {
   return value.replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+function isSimpleToken(value: string): boolean {
+  return /^[a-zA-Z0-9_-]+$/.test(value);
 }
 
 function cssEscape(value: string): string {
