@@ -10,15 +10,7 @@
   --muted: #64748b;
 }
 
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --page-bg: #0b1120;
-  --card-bg: #0f172a;
-  --card-border: #1e293b;
-  --text: #e2e8f0;
-  --muted: #94a3b8;
-}
-
+html,
 body {
   margin: 0;
   padding: 24px;
@@ -58,8 +50,13 @@ select {
   padding: 6px 8px;
   border-radius: 8px;
   border: 1px solid var(--card-border);
-  background: transparent;
+  background: var(--card-bg);
   color: inherit;
+}
+
+option {
+  color: #0f172a;
+  background: #ffffff;
 }
 
 .row {
