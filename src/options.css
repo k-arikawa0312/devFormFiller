@@ -2,11 +2,28 @@
   font-family: "Inter", system-ui, sans-serif;
   color: #0f172a;
   background: #f8fafc;
+  color-scheme: light;
+  --page-bg: #f8fafc;
+  --card-bg: #ffffff;
+  --card-border: #e2e8f0;
+  --text: #0f172a;
+  --muted: #64748b;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page-bg: #0b1120;
+  --card-bg: #0f172a;
+  --card-border: #1e293b;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
 }
 
 body {
   margin: 0;
   padding: 24px;
+  background: var(--page-bg);
+  color: var(--text);
 }
 
 .page {
@@ -24,17 +41,25 @@ header h1 {
 
 header p {
   margin: 6px 0 0;
-  color: #64748b;
+  color: var(--muted);
 }
 
 .card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 12px;
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+select {
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+  background: transparent;
+  color: inherit;
 }
 
 .row {
@@ -47,5 +72,5 @@ header p {
 .hint {
   margin: 0;
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--muted);
 }

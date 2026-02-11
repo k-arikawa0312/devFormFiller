@@ -4,6 +4,7 @@ import { pickElement } from "./picker";
 
 const PANEL_ID = "dev-form-filler-panel";
 const PRESETS_KEY = "panelPresets";
+const THEME_KEY = "theme";
 
 export function openPanel(): void {
   if (document.getElementById(PANEL_ID)) return;
@@ -19,15 +20,43 @@ export function openPanel(): void {
   const shadow = host.attachShadow({ mode: "open" });
   shadow.innerHTML = `
     <style>
-      :host { all: initial; }
+      :host {
+        all: initial;
+        --panel-bg: #ffffff;
+        --panel-text: #0f172a;
+        --panel-border: #e5e7eb;
+        --panel-muted: #475569;
+        --panel-subtle: #94a3b8;
+        --panel-header-bg: #0f172a;
+        --panel-header-text: #ffffff;
+        --panel-input-border: #cbd5f5;
+        --panel-input-bg: #f8fafc;
+        --panel-accent: #2563eb;
+        --panel-accent-muted: #eef2ff;
+        --panel-accent-border: #c7d2fe;
+      }
+      :host([data-theme="dark"]) {
+        --panel-bg: #0f172a;
+        --panel-text: #e2e8f0;
+        --panel-border: #1e293b;
+        --panel-muted: #94a3b8;
+        --panel-subtle: #64748b;
+        --panel-header-bg: #020617;
+        --panel-header-text: #e2e8f0;
+        --panel-input-border: #334155;
+        --panel-input-bg: #0b1120;
+        --panel-accent: #3b82f6;
+        --panel-accent-muted: #1e293b;
+        --panel-accent-border: #334155;
+      }
       .panel {
         width: 300px;
         max-width: calc(100vw - 32px);
-        background: #ffffff;
-        border: 1px solid #e5e7eb;
+        background: var(--panel-bg);
+        border: 1px solid var(--panel-border);
         border-radius: 12px;
         box-shadow: 0 12px 28px rgba(15, 23, 42, 0.2);
-        color: #0f172a;
+        color: var(--panel-text);
         overflow: hidden;
         box-sizing: border-box;
       }
@@ -36,8 +65,8 @@ export function openPanel(): void {
         align-items: center;
         justify-content: space-between;
         padding: 12px 14px;
-        background: #0f172a;
-        color: #ffffff;
+        background: var(--panel-header-bg);
+        color: var(--panel-header-text);
       }
       .header h2 {
         margin: 0;
@@ -46,7 +75,7 @@ export function openPanel(): void {
       .close {
         background: transparent;
         border: none;
-        color: #ffffff;
+        color: var(--panel-header-text);
         cursor: pointer;
         font-size: 16px;
       }
@@ -64,14 +93,16 @@ export function openPanel(): void {
         flex-direction: column;
         gap: 6px;
         font-size: 12px;
-        color: #334155;
+        color: var(--panel-text);
       }
       input[type="text"],
       input[type="email"] {
         padding: 6px 8px;
         border-radius: 8px;
-        border: 1px solid #cbd5f5;
+        border: 1px solid var(--panel-input-border);
         font-size: 12px;
+        background: var(--panel-input-bg);
+        color: var(--panel-text);
       }
       .selector-row {
         display: flex;
@@ -83,9 +114,9 @@ export function openPanel(): void {
         flex-direction: column;
         gap: 6px;
         padding: 10px;
-        border: 1px solid #e2e8f0;
+        border: 1px solid var(--panel-border);
         border-radius: 10px;
-        background: #ffffff;
+        background: var(--panel-input-bg);
       }
       .field-header {
         display: flex;
@@ -95,12 +126,12 @@ export function openPanel(): void {
       }
       .field-title {
         font-size: 12px;
-        color: #475569;
+        color: var(--panel-muted);
       }
       .remove {
         border: none;
         background: transparent;
-        color: #94a3b8;
+        color: var(--panel-subtle);
         cursor: pointer;
         font-size: 12px;
       }
@@ -115,30 +146,32 @@ export function openPanel(): void {
       select {
         padding: 6px 8px;
         border-radius: 8px;
-        border: 1px solid #cbd5f5;
+        border: 1px solid var(--panel-input-border);
         font-size: 12px;
-        background: #f8fafc;
+        background: var(--panel-input-bg);
+        color: var(--panel-text);
       }
       .selector {
         flex: 1;
         font-size: 12px;
-        background: #f8fafc;
+        background: var(--panel-input-bg);
+        color: var(--panel-text);
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
       }
       .secondary {
-        border: 1px solid #c7d2fe;
-        background: #eef2ff;
-        color: #3730a3;
+        border: 1px solid var(--panel-accent-border);
+        background: var(--panel-accent-muted);
+        color: var(--panel-text);
         border-radius: 8px;
         padding: 8px 10px;
         font-size: 12px;
         cursor: pointer;
       }
       .secondary:disabled {
-        background: #e0e7ff;
-        color: #94a3b8;
+        background: var(--panel-accent-muted);
+        color: var(--panel-subtle);
         cursor: not-allowed;
       }
       .primary {
@@ -146,7 +179,7 @@ export function openPanel(): void {
         padding: 10px 12px;
         border-radius: 10px;
         border: none;
-        background: #2563eb;
+        background: var(--panel-accent);
         color: #fff;
         font-weight: 600;
         cursor: pointer;
@@ -154,7 +187,7 @@ export function openPanel(): void {
       }
       .status {
         font-size: 12px;
-        color: #475569;
+        color: var(--panel-muted);
         margin: 4px 0 0;
       }
       .results {
@@ -165,7 +198,95 @@ export function openPanel(): void {
         flex-direction: column;
         gap: 4px;
         font-size: 12px;
+        color: var(--panel-muted);
+      }
+      .results li {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .ok { color: #16a34a; font-weight: 600; }
+      .ng { color: #dc2626; font-weight: 600; }
+      .reason { color: var(--panel-subtle); }
+      .checkbox {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--panel-text);
+      }
+      .add {
+        width: 100%;
+        padding: 8px 10px;
+        border-radius: 10px;
+        border: 1px dashed var(--panel-input-border);
+        background: var(--panel-input-bg);
+        color: var(--panel-muted);
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .preset {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 10px;
+        border: 1px solid var(--panel-border);
+        border-radius: 10px;
+        background: var(--panel-input-bg);
+      }
+      .preset-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .preset-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .preset-row input,
+      .preset-row select {
+        flex: 1;
+        min-width: 0;
+      }
+      .preset-name,
+      .preset-select {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .tertiary {
+        border: 1px solid var(--panel-border);
+        background: var(--panel-bg);
+        color: var(--panel-muted);
+        border-radius: 8px;
+        padding: 6px 8px;
+        font-size: 12px;
+        cursor: pointer;
+      }
+        padding: 10px 12px;
+        color: var(--panel-muted);
+        border: none;
+        background: #2563eb;
+        color: #fff;
+        font-weight: 600;
+        cursor: pointer;
+        margin-top: 4px;
+      }
+      .status {
+      .reason { color: var(--panel-subtle); }
         color: #475569;
+        margin: 4px 0 0;
+      }
+      .results {
+        list-style: none;
+        color: var(--panel-text);
+        margin: 6px 0 0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-size: 12px;
+        border: 1px dashed var(--panel-input-border);
       }
       .results li {
         display: flex;
@@ -203,7 +324,7 @@ export function openPanel(): void {
       }
       .preset-row {
         display: flex;
-        gap: 8px;
+        background: var(--panel-bg);
         align-items: center;
       }
       .preset-actions {
@@ -268,6 +389,16 @@ export function openPanel(): void {
   `;
 
   document.documentElement.appendChild(host);
+
+  chrome.storage.local.get([THEME_KEY], (data) => {
+    const value = data[THEME_KEY];
+    if (value === "system") {
+      const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      host.dataset.theme = isDark ? "dark" : "light";
+    } else {
+      host.dataset.theme = value === "dark" ? "dark" : "light";
+    }
+  });
 
   const autoSubmit = shadow.querySelector<HTMLInputElement>(".auto-submit");
   const status = shadow.querySelector<HTMLParagraphElement>(".status");
