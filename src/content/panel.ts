@@ -214,6 +214,13 @@ export function openPanel(): void {
       .preset-row input,
       .preset-row select {
         flex: 1;
+        min-width: 0;
+      }
+      .preset-name,
+      .preset-select {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
       .tertiary {
         border: 1px solid #e2e8f0;
@@ -474,6 +481,10 @@ export function openPanel(): void {
     }
   };
 
+  const formatPresetLabel = (name: string) => {
+    return name.length > 20 ? `${name.slice(0, 20)}…` : name;
+  };
+
   const loadPresetList = () => {
     chrome.storage.local.get([PRESETS_KEY], (data) => {
       const presets =
@@ -486,7 +497,8 @@ export function openPanel(): void {
       for (const preset of presets) {
         const option = document.createElement("option");
         option.value = preset.name;
-        option.textContent = preset.name;
+        option.textContent = formatPresetLabel(preset.name);
+        option.title = preset.name;
         presetSelect.appendChild(option);
       }
     });
