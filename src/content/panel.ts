@@ -3,6 +3,7 @@ import { injectPreset } from "./injector";
 import { pickElement } from "./picker";
 
 const PANEL_ID = "dev-form-filler-panel";
+const PRESETS_KEY = "panelPresets";
 
 export function openPanel(): void {
   if (document.getElementById(PANEL_ID)) return;
@@ -191,6 +192,45 @@ export function openPanel(): void {
         font-size: 12px;
         cursor: pointer;
       }
+      .preset {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 10px;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        background: #f8fafc;
+      }
+      .preset-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .preset-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .preset-row input,
+      .preset-row select {
+        flex: 1;
+        min-width: 0;
+      }
+      .preset-name,
+      .preset-select {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .tertiary {
+        border: 1px solid #e2e8f0;
+        background: #ffffff;
+        color: #475569;
+        border-radius: 8px;
+        padding: 6px 8px;
+        font-size: 12px;
+        cursor: pointer;
+      }
     </style>
     <div class="panel">
       <div class="header">
@@ -198,6 +238,20 @@ export function openPanel(): void {
         <button class="close" type="button">×</button>
       </div>
       <div class="body">
+        <div class="preset">
+          <div class="preset-row">
+            <input class="preset-name" type="text" placeholder="プリセット名" />
+            <button class="tertiary preset-save" type="button">保存</button>
+          </div>
+          <div class="preset-row">
+            <select class="preset-select"></select>
+            <div class="preset-actions">
+              <button class="tertiary preset-load" type="button">読み込み</button>
+              <button class="tertiary preset-delete" type="button">削除</button>
+            </div>
+          </div>
+        </div>
+
         <div class="fields"></div>
         <button class="add" type="button">+ 入力欄を追加</button>
 
@@ -222,6 +276,13 @@ export function openPanel(): void {
   const injectButton = shadow.querySelector<HTMLButtonElement>(".inject");
   const fieldsRoot = shadow.querySelector<HTMLDivElement>(".fields");
   const addButton = shadow.querySelector<HTMLButtonElement>(".add");
+  const presetName = shadow.querySelector<HTMLInputElement>(".preset-name");
+  const presetSelect =
+    shadow.querySelector<HTMLSelectElement>(".preset-select");
+  const presetSave = shadow.querySelector<HTMLButtonElement>(".preset-save");
+  const presetLoad = shadow.querySelector<HTMLButtonElement>(".preset-load");
+  const presetDelete =
+    shadow.querySelector<HTMLButtonElement>(".preset-delete");
 
   if (
     !autoSubmit ||
@@ -230,7 +291,12 @@ export function openPanel(): void {
     !closeButton ||
     !injectButton ||
     !fieldsRoot ||
-    !addButton
+    !addButton ||
+    !presetName ||
+    !presetSelect ||
+    !presetSave ||
+    !presetLoad ||
+    !presetDelete
   ) {
     host.remove();
     return;
@@ -269,6 +335,18 @@ export function openPanel(): void {
     });
     addButton.disabled = isPicking;
     injectButton.disabled = isPicking;
+  };
+
+  const reindexFields = () => {
+    const rows = Array.from(
+      fieldsRoot.querySelectorAll<HTMLDivElement>(".field-row"),
+    );
+    rows.forEach((row, index) => {
+      const title = row.querySelector<HTMLSpanElement>(".field-title");
+      if (title) {
+        title.textContent = `入力フィールド${index + 1}`;
+      }
+    });
   };
 
   const createFieldRow = (defaults?: {
@@ -330,6 +408,7 @@ export function openPanel(): void {
 
     removeButton.addEventListener("click", () => {
       row.remove();
+      reindexFields();
     });
 
     pickButton.addEventListener("click", async () => {
@@ -349,18 +428,25 @@ export function openPanel(): void {
     });
 
     fieldsRoot.appendChild(row);
+    reindexFields();
   };
 
-  const buildPreset = (): FormPreset => {
+  const clearFields = () => {
+    fieldsRoot.innerHTML = "";
+    reindexFields();
+  };
+
+  const collectFields = () => {
     const rows = Array.from(
       fieldsRoot.querySelectorAll<HTMLDivElement>(".field-row"),
     );
-    const fields = rows
+    return rows
       .map((row, index) => {
         const selector = row.querySelector<HTMLInputElement>(".selector");
         const value = row.querySelector<HTMLInputElement>(".field-value");
         const type = row.querySelector<HTMLSelectElement>(".field-type");
-        if (!selector || !value || !type) return null;
+        const label = row.querySelector<HTMLInputElement>(".field-label");
+        if (!selector || !value || !type || !label) return null;
         const selectorValue = selector.value.trim();
         if (!selectorValue) return null;
 
@@ -370,9 +456,56 @@ export function openPanel(): void {
           type: type.value as FormPreset["fields"][number]["type"],
           valueStrategy: "static" as const,
           staticValue: value.value,
+          label: label.value,
         };
       })
       .filter((item): item is NonNullable<typeof item> => item !== null);
+  };
+
+  const populateFields = (
+    fields: Array<{
+      label?: string;
+      selector: string;
+      type: string;
+      value?: string;
+    }>,
+  ) => {
+    clearFields();
+    for (const field of fields) {
+      createFieldRow({
+        label: field.label ?? "",
+        selector: field.selector,
+        type: field.type,
+        value: field.value ?? "",
+      });
+    }
+  };
+
+  const formatPresetLabel = (name: string) => {
+    return name.length > 20 ? `${name.slice(0, 20)}…` : name;
+  };
+
+  const loadPresetList = () => {
+    chrome.storage.local.get([PRESETS_KEY], (data) => {
+      const presets =
+        (data[PRESETS_KEY] as Array<{ name: string }> | undefined) ?? [];
+      presetSelect.innerHTML = "";
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = "プリセットを選択";
+      presetSelect.appendChild(placeholder);
+      for (const preset of presets) {
+        const option = document.createElement("option");
+        option.value = preset.name;
+        option.textContent = formatPresetLabel(preset.name);
+        option.title = preset.name;
+        presetSelect.appendChild(option);
+      }
+    });
+  };
+
+  const buildPreset = (): FormPreset => {
+    const fields = collectFields().map(({ label, ...rest }) => rest);
 
     return {
       id:
@@ -390,6 +523,69 @@ export function openPanel(): void {
     host.remove();
   });
 
+  presetSave.addEventListener("click", () => {
+    const name = presetName.value.trim();
+    if (!name) {
+      setStatus("プリセット名を入力してください");
+      return;
+    }
+
+    const fields = collectFields();
+    chrome.storage.local.get([PRESETS_KEY], (data) => {
+      const presets =
+        (data[PRESETS_KEY] as
+          | Array<{ name: string; fields: typeof fields; autoSubmit: boolean }>
+          | undefined) ?? [];
+      const next = presets.filter((preset) => preset.name !== name);
+      next.push({ name, fields, autoSubmit: autoSubmit.checked });
+      chrome.storage.local.set({ [PRESETS_KEY]: next }, () => {
+        setStatus("プリセットを保存しました");
+        loadPresetList();
+      });
+    });
+  });
+
+  presetLoad.addEventListener("click", () => {
+    const name = presetSelect.value;
+    if (!name) return;
+    chrome.storage.local.get([PRESETS_KEY], (data) => {
+      const presets =
+        (data[PRESETS_KEY] as
+          | Array<{
+              name: string;
+              fields: Array<{
+                label?: string;
+                selector: string;
+                type: string;
+                value?: string;
+              }>;
+              autoSubmit: boolean;
+            }>
+          | undefined) ?? [];
+      const preset = presets.find((item) => item.name === name);
+      if (!preset) return;
+      populateFields(preset.fields);
+      autoSubmit.checked = preset.autoSubmit;
+      presetName.value = preset.name;
+      setStatus("プリセットを読み込みました");
+    });
+  });
+
+  presetDelete.addEventListener("click", () => {
+    const name = presetSelect.value;
+    if (!name) return;
+    chrome.storage.local.get([PRESETS_KEY], (data) => {
+      const presets =
+        (data[PRESETS_KEY] as Array<{ name: string }> | undefined) ?? [];
+      const next = presets.filter((preset) => preset.name !== name);
+      chrome.storage.local.set({ [PRESETS_KEY]: next }, () => {
+        setStatus("プリセットを削除しました");
+        presetSelect.value = "";
+        loadPresetList();
+      });
+    });
+  });
+
   injectButton.addEventListener("click", async () => {
     setStatus("");
     results.innerHTML = "";
@@ -405,4 +601,5 @@ export function openPanel(): void {
 
   createFieldRow({ label: "氏名", selector: "name", type: "text" });
   createFieldRow({ label: "メール", selector: "email", type: "email" });
+  loadPresetList();
 }
