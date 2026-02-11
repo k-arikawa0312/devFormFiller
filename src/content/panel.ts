@@ -20,13 +20,15 @@ export function openPanel(): void {
     <style>
       :host { all: initial; }
       .panel {
-        width: 320px;
+        width: 300px;
+        max-width: calc(100vw - 32px);
         background: #ffffff;
         border: 1px solid #e5e7eb;
         border-radius: 12px;
         box-shadow: 0 12px 28px rgba(15, 23, 42, 0.2);
         color: #0f172a;
         overflow: hidden;
+        box-sizing: border-box;
       }
       .header {
         display: flex;
@@ -52,6 +54,9 @@ export function openPanel(): void {
         display: flex;
         flex-direction: column;
         gap: 10px;
+        max-height: min(70vh, 520px);
+        overflow-y: auto;
+        overflow-x: hidden;
       }
       label {
         display: flex;
@@ -62,10 +67,10 @@ export function openPanel(): void {
       }
       input[type="text"],
       input[type="email"] {
-        padding: 8px 10px;
+        padding: 6px 8px;
         border-radius: 8px;
         border: 1px solid #cbd5f5;
-        font-size: 13px;
+        font-size: 12px;
       }
       .selector-row {
         display: flex;
@@ -103,8 +108,11 @@ export function openPanel(): void {
         gap: 8px;
         align-items: center;
       }
+      .row > * {
+        min-width: 0;
+      }
       select {
-        padding: 8px 10px;
+        padding: 6px 8px;
         border-radius: 8px;
         border: 1px solid #cbd5f5;
         font-size: 12px;
@@ -114,6 +122,9 @@ export function openPanel(): void {
         flex: 1;
         font-size: 12px;
         background: #f8fafc;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
       .secondary {
         border: 1px solid #c7d2fe;
@@ -247,15 +258,12 @@ export function openPanel(): void {
   const setPicking = (isPicking: boolean) => {
     host.style.pointerEvents = isPicking ? "none" : "auto";
     host.style.opacity = isPicking ? "0.6" : "1";
-    const pickButtons = fieldsRoot.querySelectorAll<HTMLButtonElement>(
-      ".pick",
-    );
+    const pickButtons = fieldsRoot.querySelectorAll<HTMLButtonElement>(".pick");
     pickButtons.forEach((button) => {
       button.disabled = isPicking;
     });
-    const removeButtons = fieldsRoot.querySelectorAll<HTMLButtonElement>(
-      ".remove",
-    );
+    const removeButtons =
+      fieldsRoot.querySelectorAll<HTMLButtonElement>(".remove");
     removeButtons.forEach((button) => {
       button.disabled = isPicking;
     });
