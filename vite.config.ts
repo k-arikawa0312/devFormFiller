@@ -5,4 +5,11 @@ import manifest from "./src/manifest"; // 後で作ります
 
 export default defineConfig({
   plugins: [react(), crx({ manifest })],
+  server: {
+    host: "localhost",
+    hmr: {
+      host: "localhost",
+      protocol: "ws",
+    },
+  },
 });
