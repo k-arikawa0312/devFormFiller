@@ -548,7 +548,7 @@ export function openPanel(): void {
   };
 
   const buildPreset = (): FormPreset => {
-    const fields = collectFields().map(({ label, ...rest }) => rest);
+    const fields = collectFields().map(({ ...rest }) => rest);
 
     return {
       id:
