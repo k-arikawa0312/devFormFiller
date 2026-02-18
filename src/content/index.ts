@@ -2,6 +2,7 @@ import type { FormPreset } from "../lib/types";
 import { injectPreset } from "./injector";
 import { pickElement } from "./picker";
 import { openPanel } from "./panel";
+import { isChromeExtensionContext, safeStorageGet, safeStorageSet } from "../lib/chromeUtils";
 
 const AUTO_OPEN_KEY = "autoOpenPanel";
 let panelOpened = false;
@@ -13,13 +14,25 @@ function ensurePanelOpen() {
 }
 
 function autoOpenIfEnabled() {
-  chrome.storage.local.get([AUTO_OPEN_KEY], (data) => {
-    const value = data[AUTO_OPEN_KEY];
-    const enabled = typeof value === "boolean" ? value : true;
-    if (enabled) {
-      ensurePanelOpen();
-    }
-  });
+  if (!isChromeExtensionContext()) {
+    // chrome APIが利用できない場合はデフォルトでパネルを開く
+    ensurePanelOpen();
+    return;
+  }
+
+  try {
+    safeStorageGet([AUTO_OPEN_KEY], (data) => {
+      const value = data[AUTO_OPEN_KEY];
+      const enabled = typeof value === "boolean" ? value : true;
+      if (enabled) {
+        ensurePanelOpen();
+      }
+    });
+  } catch (e) {
+    // エラーの場合はデフォルトでパネルを開く
+    console.warn('Failed to access chrome.storage.local:', e);
+    ensurePanelOpen();
+  }
 }
 
 if (document.readyState === "loading") {
@@ -76,7 +89,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (isPickMessage(message)) {
     pickElement()
       .then((result) => {
-        chrome.storage.local.set({
+        safeStorageSet({
           lastPick: {
             target: message.target,
             result,

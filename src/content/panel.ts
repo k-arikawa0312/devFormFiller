@@ -1,6 +1,11 @@
 import type { FormPreset, InjectionResult } from "../lib/types";
 import { injectPreset } from "./injector";
 import { pickElement } from "./picker";
+import { FakerGenerator } from "../lib/fakerGenerator";
+import { getFakerMethodForField } from "../lib/fieldGenerators";
+import { safeStorageGet, safeStorageSet } from "../lib/chromeUtils";
+
+const fakerGenerator = new FakerGenerator();
 
 const PANEL_ID = "dev-form-filler-panel";
 const PRESETS_KEY = "panelPresets";
@@ -264,6 +269,29 @@ export function openPanel(): void {
         font-size: 12px;
         cursor: pointer;
       }
+      .value-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .value-row input {
+        flex: 1;
+      }
+      .generate-btn {
+        border: 1px solid var(--panel-accent-border);
+        background: var(--panel-accent-muted);
+        color: var(--panel-accent);
+        border-radius: 8px;
+        padding: 6px 10px;
+        font-size: 11px;
+        cursor: pointer;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+      .generate-btn:hover {
+        background: var(--panel-accent);
+        color: #fff;
+      }
     </style>
     <div class="panel">
       <div class="header">
@@ -302,7 +330,7 @@ export function openPanel(): void {
 
   document.documentElement.appendChild(host);
 
-  chrome.storage.local.get([THEME_KEY], (data) => {
+  safeStorageGet([THEME_KEY], (data) => {
     const value = data[THEME_KEY];
     if (value === "system") {
       const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -411,7 +439,10 @@ export function openPanel(): void {
       </label>
       <label>
         <span>値</span>
-        <input class="field-value" type="text" placeholder="入力する値" />
+        <div class="value-row">
+          <input class="field-value" type="text" placeholder="入力する値" />
+          <button class="generate-btn" type="button">生成</button>
+        </div>
       </label>
       <div class="row">
         <select class="field-type">
@@ -432,6 +463,7 @@ export function openPanel(): void {
     const typeSelect = row.querySelector<HTMLSelectElement>(".field-type");
     const pickButton = row.querySelector<HTMLButtonElement>(".pick");
     const removeButton = row.querySelector<HTMLButtonElement>(".remove");
+    const generateButton = row.querySelector<HTMLButtonElement>(".generate-btn");
 
     if (
       !labelInput ||
@@ -439,7 +471,8 @@ export function openPanel(): void {
       !selectorInput ||
       !typeSelect ||
       !pickButton ||
-      !removeButton
+      !removeButton ||
+      !generateButton
     ) {
       return;
     }
@@ -468,6 +501,20 @@ export function openPanel(): void {
       } else {
         setStatus("選択を中止しました");
       }
+    });
+
+    // 生成ボタンのクリックイベント
+    generateButton.addEventListener("click", () => {
+      const fieldType = typeSelect.value as FormPreset["fields"][number]["type"];
+      const label = labelInput.value.trim();
+
+      // ラベルから適切なfakerメソッドを推測
+      const fakerMethod = label ? getFakerMethodForField(label) : undefined;
+
+      // 値を生成
+      const generatedValue = fakerGenerator.generateByFieldType(fieldType, fakerMethod);
+      valueInput.value = String(generatedValue);
+      setStatus("値を生成しました");
     });
 
     fieldsRoot.appendChild(row);
@@ -529,7 +576,7 @@ export function openPanel(): void {
   };
 
   const loadPresetList = () => {
-    chrome.storage.local.get([PRESETS_KEY], (data) => {
+    safeStorageGet([PRESETS_KEY], (data) => {
       const presets =
         (data[PRESETS_KEY] as Array<{ name: string }> | undefined) ?? [];
       presetSelect.innerHTML = "";
@@ -574,14 +621,14 @@ export function openPanel(): void {
     }
 
     const fields = collectFields();
-    chrome.storage.local.get([PRESETS_KEY], (data) => {
+    safeStorageGet([PRESETS_KEY], (data) => {
       const presets =
         (data[PRESETS_KEY] as
           | Array<{ name: string; fields: typeof fields; autoSubmit: boolean }>
           | undefined) ?? [];
       const next = presets.filter((preset) => preset.name !== name);
       next.push({ name, fields, autoSubmit: autoSubmit.checked });
-      chrome.storage.local.set({ [PRESETS_KEY]: next }, () => {
+      safeStorageSet({ [PRESETS_KEY]: next }, () => {
         setStatus("プリセットを保存しました");
         loadPresetList();
       });
@@ -591,7 +638,7 @@ export function openPanel(): void {
   presetLoad.addEventListener("click", () => {
     const name = presetSelect.value;
     if (!name) return;
-    chrome.storage.local.get([PRESETS_KEY], (data) => {
+    safeStorageGet([PRESETS_KEY], (data) => {
       const presets =
         (data[PRESETS_KEY] as
           | Array<{
@@ -617,11 +664,11 @@ export function openPanel(): void {
   presetDelete.addEventListener("click", () => {
     const name = presetSelect.value;
     if (!name) return;
-    chrome.storage.local.get([PRESETS_KEY], (data) => {
+    safeStorageGet([PRESETS_KEY], (data) => {
       const presets =
         (data[PRESETS_KEY] as Array<{ name: string }> | undefined) ?? [];
       const next = presets.filter((preset) => preset.name !== name);
-      chrome.storage.local.set({ [PRESETS_KEY]: next }, () => {
+      safeStorageSet({ [PRESETS_KEY]: next }, () => {
         setStatus("プリセットを削除しました");
         presetSelect.value = "";
         loadPresetList();
