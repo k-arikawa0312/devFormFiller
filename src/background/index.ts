@@ -6,14 +6,9 @@ chrome.action.onClicked.addListener(async (tab) => {
   try {
     await sendOpenPanel(tab.id);
   } catch (error) {
+    // Content script might not be loaded yet, try reloading the tab
     const message = error instanceof Error ? error.message : String(error);
-    if (
-      message.includes("Receiving end does not exist") ||
-      message.includes("Could not establish connection")
-    ) {
-      await injectContentScript(tab.id);
-      await sendOpenPanel(tab.id);
-    }
+    console.error('Failed to send message:', message);
   }
 });
 
@@ -30,23 +25,5 @@ function sendOpenPanel(tabId: number): Promise<void> {
       }
       resolve();
     });
-  });
-}
-
-function injectContentScript(tabId: number): Promise<void> {
-  return new Promise((resolve, reject) => {
-    chrome.scripting.executeScript(
-      {
-        target: { tabId },
-        files: ["src/content/index.ts"],
-      },
-      () => {
-        if (chrome.runtime.lastError) {
-          reject(new Error(chrome.runtime.lastError.message));
-          return;
-        }
-        resolve();
-      },
-    );
   });
 }
