@@ -4,9 +4,11 @@
  * This file demonstrates how to use the faker generator system
  */
 
-import { fakerGenerator } from '../fakerGenerator';
+import { FakerGenerator } from '../fakerGenerator';
 import { generateFieldValue, generateFormFields, getFakerMethodForField } from '../fieldGenerators';
 import type { FieldType } from '../types';
+
+const fakerGenerator = new FakerGenerator();
 
 // Example 1: Basic usage - generate values by method path
 console.log('=== Example 1: Generate by method path ===');
@@ -100,20 +102,8 @@ console.log('URL:', fakerGenerator.generateUrl());
 console.log('UUID:', fakerGenerator.generateUuid());
 console.log('');
 
-// Example 9: Change locale
-console.log('=== Example 9: Change locale ===');
-console.log('Current locale:', fakerGenerator.getLocale());
-console.log('Japanese name:', fakerGenerator.generateByMethod('person.fullName'));
-
-fakerGenerator.setLocale('en');
-console.log('English name:', fakerGenerator.generateByMethod('person.fullName'));
-
-fakerGenerator.setLocale('ja');
-console.log('Japanese name (restored):', fakerGenerator.generateByMethod('person.fullName'));
-console.log('');
-
-// Example 10: Complex schema generation
-console.log('=== Example 10: Complex schema generation ===');
+// Example 9: Complex schema generation
+console.log('=== Example 9: Complex schema generation ===');
 const orderData = fakerGenerator.generateFromSchema({
   customerName: 'person.fullName',
   customerEmail: 'internet.email',

@@ -1,5 +1,7 @@
-import { fakerGenerator } from "./fakerGenerator";
+import { FakerGenerator } from "./fakerGenerator";
 import { type FieldType } from "./types";
+
+const fakerGenerator = new FakerGenerator();
 
 /**
  * Predefined faker methods for common field types
@@ -75,9 +77,10 @@ export function getFakerMethodForField(fieldName: string): string | undefined {
     return FIELD_METHOD_MAPPING[normalizedName];
   }
 
-  // Partial match (e.g., "userEmail" -> "email")
+  // Partial match using startsWith or endsWith for more specific matching
+  // This avoids ambiguous matches like "id" matching "zipCode", "postalCode", "uuid"
   for (const [key, method] of Object.entries(FIELD_METHOD_MAPPING)) {
-    if (normalizedName.includes(key) || key.includes(normalizedName)) {
+    if (normalizedName.startsWith(key) || normalizedName.endsWith(key)) {
       return method;
     }
   }

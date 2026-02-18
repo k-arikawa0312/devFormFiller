@@ -6,7 +6,6 @@ import { type FieldType } from "./types";
  * Provides type-safe methods for generating random form data
  */
 export class FakerGenerator {
-  private locale: string = "ja";
 
   /**
    * Generate a random value based on the faker method path
@@ -112,7 +111,7 @@ export class FakerGenerator {
    * Generate random boolean (for checkbox/select)
    */
   generateBoolean(): string {
-    return faker.datatype.boolean() ? "true" : "false";
+    return faker.helpers.arrayElement([true, false]) ? "true" : "false";
   }
 
   /**
@@ -172,23 +171,6 @@ export class FakerGenerator {
   }
 
   /**
-   * Set the locale for faker
-   * @param locale - Locale code (e.g., 'ja', 'en', 'de')
-   */
-  setLocale(locale: string): void {
-    this.locale = locale;
-    // Note: In newer versions of faker, locale is set per-instance
-    // For now, we'll track the locale but won't change the global faker instance
-  }
-
-  /**
-   * Get current locale
-   */
-  getLocale(): string {
-    return this.locale;
-  }
-
-  /**
    * Generate multiple random values
    * @param fieldType - The type of form field
    * @param count - Number of values to generate
@@ -228,6 +210,3 @@ export class FakerGenerator {
     return result;
   }
 }
-
-// Singleton instance
-export const fakerGenerator = new FakerGenerator();

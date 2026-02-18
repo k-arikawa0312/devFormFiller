@@ -1,20 +1,20 @@
 import { useState } from 'react';
-import { fakerGenerator } from './fakerGenerator';
+import { FakerGenerator } from './fakerGenerator';
 import { generateFieldValue, generateFormFields } from './fieldGenerators';
 import type { FieldType } from './types';
 
 /**
  * Hook for generating random form values using faker
- * @returns Object containing generator functions and current locale
+ * @returns Object containing generator functions
  */
 export function useFakerGenerator() {
-  const [locale, setLocale] = useState(fakerGenerator.getLocale());
+  const [generator] = useState(() => new FakerGenerator());
 
   /**
    * Generate a single random value
    */
   const generateValue = (fieldType: FieldType, fakerMethod?: string): string | number => {
-    return fakerGenerator.generateByFieldType(fieldType, fakerMethod);
+    return generator.generateByFieldType(fieldType, fakerMethod);
   };
 
   /**
@@ -32,7 +32,7 @@ export function useFakerGenerator() {
     count: number,
     fakerMethod?: string
   ): (string | number)[] => {
-    return fakerGenerator.generateMultiple(fieldType, count, fakerMethod);
+    return generator.generateMultiple(fieldType, count, fakerMethod);
   };
 
   /**
@@ -41,37 +41,27 @@ export function useFakerGenerator() {
   const generateFromSchema = <T extends Record<string, string | { type: FieldType; method?: string }>>(
     schema: T
   ): Record<string, string | number> => {
-    return fakerGenerator.generateFromSchema(schema);
-  };
-
-  /**
-   * Change the faker locale
-   */
-  const changeLocale = (newLocale: string) => {
-    fakerGenerator.setLocale(newLocale);
-    setLocale(newLocale);
+    return generator.generateFromSchema(schema);
   };
 
   return {
-    locale,
     generateValue,
     generateForField,
     generateValues,
     generateFromSchema,
-    changeLocale,
     // Direct access to generator methods
-    generateEmail: () => fakerGenerator.generateEmail(),
-    generatePhone: () => fakerGenerator.generatePhone(),
-    generateText: () => fakerGenerator.generateText(),
-    generateNumber: () => fakerGenerator.generateNumber(),
-    generateDate: () => fakerGenerator.generateDate(),
-    generateCompany: () => fakerGenerator.generateCompany(),
-    generateAddress: () => fakerGenerator.generateAddress(),
-    generateUsername: () => fakerGenerator.generateUsername(),
-    generatePassword: () => fakerGenerator.generatePassword(),
-    generateUrl: () => fakerGenerator.generateUrl(),
-    generateUuid: () => fakerGenerator.generateUuid(),
-    generateZipCode: () => fakerGenerator.generateZipCode(),
+    generateEmail: () => generator.generateEmail(),
+    generatePhone: () => generator.generatePhone(),
+    generateText: () => generator.generateText(),
+    generateNumber: () => generator.generateNumber(),
+    generateDate: () => generator.generateDate(),
+    generateCompany: () => generator.generateCompany(),
+    generateAddress: () => generator.generateAddress(),
+    generateUsername: () => generator.generateUsername(),
+    generatePassword: () => generator.generatePassword(),
+    generateUrl: () => generator.generateUrl(),
+    generateUuid: () => generator.generateUuid(),
+    generateZipCode: () => generator.generateZipCode(),
   };
 }
 
@@ -84,14 +74,10 @@ export function useFormPresetGenerator() {
   /**
    * Generate values for a complete form preset
    */
-  const generatePreset = async (
+  const generatePreset = (
     fields: Array<{ name: string; type: FieldType; fakerMethod?: string }>
-  ): Promise<Record<string, string | number>> => {
+  ): Record<string, string | number> => {
     setIsGenerating(true);
-
-    // Simulate async operation for better UX with loading states
-    await new Promise(resolve => setTimeout(resolve, 100));
-
     const result = generateFormFields(fields);
     setIsGenerating(false);
 
