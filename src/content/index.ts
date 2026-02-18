@@ -6,6 +6,20 @@ import { openPanel } from "./panel";
 const AUTO_OPEN_KEY = "autoOpenPanel";
 let panelOpened = false;
 
+// chrome APIが利用可能かチェック
+const isChromeExtensionContext = (): boolean => {
+  try {
+    return typeof window !== 'undefined' &&
+           typeof window.chrome === 'object' &&
+           window.chrome !== null &&
+           typeof window.chrome.storage === 'object' &&
+           window.chrome.storage !== null &&
+           typeof window.chrome.storage.local === 'object';
+  } catch {
+    return false;
+  }
+};
+
 function ensurePanelOpen() {
   if (panelOpened) return;
   panelOpened = true;
@@ -13,13 +27,25 @@ function ensurePanelOpen() {
 }
 
 function autoOpenIfEnabled() {
-  chrome.storage.local.get([AUTO_OPEN_KEY], (data) => {
-    const value = data[AUTO_OPEN_KEY];
-    const enabled = typeof value === "boolean" ? value : true;
-    if (enabled) {
-      ensurePanelOpen();
-    }
-  });
+  if (!isChromeExtensionContext()) {
+    // chrome APIが利用できない場合はデフォルトでパネルを開く
+    ensurePanelOpen();
+    return;
+  }
+
+  try {
+    chrome.storage.local.get([AUTO_OPEN_KEY], (data) => {
+      const value = data[AUTO_OPEN_KEY];
+      const enabled = typeof value === "boolean" ? value : true;
+      if (enabled) {
+        ensurePanelOpen();
+      }
+    });
+  } catch (e) {
+    // エラー場合はデフォルトでパネルを開く
+    console.warn('Failed to access chrome.storage.local:', e);
+    ensurePanelOpen();
+  }
 }
 
 if (document.readyState === "loading") {
@@ -76,13 +102,19 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (isPickMessage(message)) {
     pickElement()
       .then((result) => {
-        chrome.storage.local.set({
-          lastPick: {
-            target: message.target,
-            result,
-            timestamp: Date.now(),
-          },
-        });
+        if (isChromeExtensionContext()) {
+          try {
+            chrome.storage.local.set({
+              lastPick: {
+                target: message.target,
+                result,
+                timestamp: Date.now(),
+              },
+            });
+          } catch (e) {
+            console.warn('Failed to save to chrome.storage.local:', e);
+          }
+        }
         sendResponse({ ok: true, result });
       })
       .catch((error) => {
