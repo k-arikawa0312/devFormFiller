@@ -1,58 +1,15 @@
 import type { FormPreset, InjectionResult } from "../lib/types";
 import { injectPreset } from "./injector";
 import { pickElement } from "./picker";
-import { fakerGenerator } from "../lib/fakerGenerator";
+import { FakerGenerator } from "../lib/fakerGenerator";
+import { getFakerMethodForField } from "../lib/fieldGenerators";
+import { safeStorageGet, safeStorageSet } from "../lib/chromeUtils";
+
+const fakerGenerator = new FakerGenerator();
 
 const PANEL_ID = "dev-form-filler-panel";
 const PRESETS_KEY = "panelPresets";
 const THEME_KEY = "theme";
-
-// chrome APIが利用可能かチェック
-const isChromeExtensionContext = (): boolean => {
-  try {
-    return typeof window !== 'undefined' &&
-           typeof window.chrome === 'object' &&
-           window.chrome !== null &&
-           typeof window.chrome.storage === 'object' &&
-           window.chrome.storage !== null &&
-           typeof window.chrome.storage.local === 'object';
-  } catch {
-    return false;
-  }
-};
-
-// chrome APIの安全なラッパー
-const safeStorageGet = (
-  keys: string[],
-  callback: (data: Record<string, unknown>) => void
-): void => {
-  if (isChromeExtensionContext()) {
-    try {
-      chrome.storage.local.get(keys, callback);
-    } catch (e) {
-      console.warn('Failed to access chrome.storage.local:', e);
-      callback({});
-    }
-  } else {
-    callback({});
-  }
-};
-
-const safeStorageSet = (
-  data: Record<string, unknown>,
-  callback?: () => void
-): void => {
-  if (isChromeExtensionContext()) {
-    try {
-      chrome.storage.local.set(data, callback ?? (() => {}));
-    } catch (e) {
-      console.warn('Failed to access chrome.storage.local:', e);
-      if (callback) callback();
-    }
-  } else if (callback) {
-    callback();
-  }
-};
 
 export function openPanel(): void {
   if (document.getElementById(PANEL_ID)) return;
@@ -552,36 +509,7 @@ export function openPanel(): void {
       const label = labelInput.value.trim();
 
       // ラベルから適切なfakerメソッドを推測
-      let fakerMethod: string | undefined;
-      if (label) {
-        const normalizedLabel = label.toLowerCase().replace(/[^a-z0-9]/g, "");
-        // 簡易的なマッピング（より高度なものはfieldGenerators.tsのgetFakerMethodForFieldを使用）
-        if (normalizedLabel.includes("email") || normalizedLabel.includes("メール")) {
-          fakerMethod = "internet.email";
-        } else if (normalizedLabel.includes("name") || normalizedLabel.includes("名")) {
-          fakerMethod = "person.fullName";
-        } else if (normalizedLabel.includes("first") || normalizedLabel.includes("名前")) {
-          fakerMethod = "person.firstName";
-        } else if (normalizedLabel.includes("last") || normalizedLabel.includes("姓")) {
-          fakerMethod = "person.lastName";
-        } else if (normalizedLabel.includes("phone") || normalizedLabel.includes("電話") || normalizedLabel.includes("携帯")) {
-          fakerMethod = "phone.number";
-        } else if (normalizedLabel.includes("address") || normalizedLabel.includes("住所")) {
-          fakerMethod = "location.streetAddress";
-        } else if (normalizedLabel.includes("zip") || normalizedLabel.includes("postal") || normalizedLabel.includes("郵便")) {
-          fakerMethod = "location.zipCode";
-        } else if (normalizedLabel.includes("company") || normalizedLabel.includes("会社")) {
-          fakerMethod = "company.name";
-        } else if (normalizedLabel.includes("username") || normalizedLabel.includes("ユーザー")) {
-          fakerMethod = "internet.username";
-        } else if (normalizedLabel.includes("password") || normalizedLabel.includes("パスワード")) {
-          fakerMethod = "internet.password";
-        } else if (normalizedLabel.includes("url") || normalizedLabel.includes("website")) {
-          fakerMethod = "internet.url";
-        } else if (normalizedLabel.includes("uuid") || normalizedLabel.includes("id")) {
-          fakerMethod = "string.uuid";
-        }
-      }
+      const fakerMethod = label ? getFakerMethodForField(label) : undefined;
 
       // 値を生成
       const generatedValue = fakerGenerator.generateByFieldType(fieldType, fakerMethod);

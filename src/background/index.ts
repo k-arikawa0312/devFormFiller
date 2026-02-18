@@ -6,9 +6,22 @@ chrome.action.onClicked.addListener(async (tab) => {
   try {
     await sendOpenPanel(tab.id);
   } catch (error) {
-    // Content script might not be loaded yet, try reloading the tab
+    // Content script might not be loaded yet, try injecting it
     const message = error instanceof Error ? error.message : String(error);
     console.error('Failed to send message:', message);
+
+    // Try to inject the content script and retry
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ["assets/index.ts-DoFBOnJD.js"]
+      });
+      // Wait a bit for the script to initialize, then retry
+      await new Promise(resolve => setTimeout(resolve, 100));
+      await sendOpenPanel(tab.id);
+    } catch (injectError) {
+      console.error('Failed to inject content script:', injectError);
+    }
   }
 });
 

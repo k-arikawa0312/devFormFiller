@@ -1,5 +1,5 @@
 // Export all faker-related utilities
-export { fakerGenerator, FakerGenerator } from './fakerGenerator';
+export { FakerGenerator } from './fakerGenerator';
 export {
   generateFieldValue,
   generateFormFields,
@@ -11,6 +11,9 @@ export {
 
 // Export hooks
 export { useFakerGenerator, useFormPresetGenerator } from './useFakerGenerator';
+
+// Export chrome utilities
+export { isChromeExtensionContext, safeStorageGet, safeStorageSet } from './chromeUtils';
 
 // Export types
 export type { FieldType, ValueStrategy, FieldRule, FormPreset, InjectionResult } from './types';
