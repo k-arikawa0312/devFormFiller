@@ -21,6 +21,9 @@ DevFormFillerは、ページ内フローティングパネルから以下を実�
 
 - フローティングパネル UI（コンテンツスクリプト）
 - 要素ピッカー（クリックで対象入力欄のセレクタ取得）
+- **ランダム値生成ボタン**（faker.js によるテストデータ自動生成）
+  - 入力フィールドのラベルから適切な faker メソッドを自動推測
+  - 氏名、メール、電話番号、住所など50種類以上のフィールドタイプに対応
 - 複数戦略による要素探索
   - CSS セレクタ
   - `name` / `id` / `placeholder` / `aria-label`
@@ -63,10 +66,17 @@ DevFormFillerは、ページ内フローティングパネルから以下を実�
 
 ### Content Script (`src/content/*`)
 
-- `panel.ts`: フローティング UI、プリセット操作、注入実行、結果表示
+- `panel.ts`: フローティング UI、プリセット操作、注入実行、結果表示、ランダム値生成ボタン
 - `picker.ts`: ホバーオーバーレイ表示 + クリック選択
 - `injector.ts`: フォーム要素探索、値適用、結果返却
 - `index.ts`: メッセージ受信・起動制御（自動オープン設定対応）
+
+### Faker Generator (`src/lib/*`)
+
+- `fakerGenerator.ts`: faker.js によるランダム値生成のコアクラス
+- `fieldGenerators.ts`: フィールド名に基づく faker メソッドの自動選択
+- `useFakerGenerator.ts`: React フック経由での faker 機能利用
+- `chromeUtils.ts`: Chrome Extension API の安全なアクセスラッパー
 
 ### Options Page (`src/options.ts`)
 
@@ -122,11 +132,18 @@ src/
     picker.ts
   lib/
     types.ts
+    fakerGenerator.ts
+    fieldGenerators.ts
+    useFakerGenerator.ts
+    chromeUtils.ts
+    __tests__/
+      fakerGenerator.examples.ts
   options.ts
   manifest.ts
 
 docs/
   system-design.md
+  FAKER_GENERATOR.md
 
 .github/workflows/
   release.yml
@@ -143,7 +160,8 @@ docs/
 - Playwright などによる注入ロジックの回帰テスト
 - 権限スコープの最小化
 - プリセットの import/export 機能
-- 入力候補テンプレートの拡充（faker 戦略の UI 化）
+- faker メソッドの UI での選択機能拡充
+- カスタム faker メソッドの登録機能
 
 ## 10. ライセンス
 
