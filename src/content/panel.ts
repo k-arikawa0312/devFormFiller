@@ -1,10 +1,58 @@
 import type { FormPreset, InjectionResult } from "../lib/types";
 import { injectPreset } from "./injector";
 import { pickElement } from "./picker";
+import { fakerGenerator } from "../lib/fakerGenerator";
 
 const PANEL_ID = "dev-form-filler-panel";
 const PRESETS_KEY = "panelPresets";
 const THEME_KEY = "theme";
+
+// chrome APIが利用可能かチェック
+const isChromeExtensionContext = (): boolean => {
+  try {
+    return typeof window !== 'undefined' &&
+           typeof window.chrome === 'object' &&
+           window.chrome !== null &&
+           typeof window.chrome.storage === 'object' &&
+           window.chrome.storage !== null &&
+           typeof window.chrome.storage.local === 'object';
+  } catch {
+    return false;
+  }
+};
+
+// chrome APIの安全なラッパー
+const safeStorageGet = (
+  keys: string[],
+  callback: (data: Record<string, unknown>) => void
+): void => {
+  if (isChromeExtensionContext()) {
+    try {
+      chrome.storage.local.get(keys, callback);
+    } catch (e) {
+      console.warn('Failed to access chrome.storage.local:', e);
+      callback({});
+    }
+  } else {
+    callback({});
+  }
+};
+
+const safeStorageSet = (
+  data: Record<string, unknown>,
+  callback?: () => void
+): void => {
+  if (isChromeExtensionContext()) {
+    try {
+      chrome.storage.local.set(data, callback ?? (() => {}));
+    } catch (e) {
+      console.warn('Failed to access chrome.storage.local:', e);
+      if (callback) callback();
+    }
+  } else if (callback) {
+    callback();
+  }
+};
 
 export function openPanel(): void {
   if (document.getElementById(PANEL_ID)) return;
@@ -264,6 +312,29 @@ export function openPanel(): void {
         font-size: 12px;
         cursor: pointer;
       }
+      .value-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .value-row input {
+        flex: 1;
+      }
+      .generate-btn {
+        border: 1px solid var(--panel-accent-border);
+        background: var(--panel-accent-muted);
+        color: var(--panel-accent);
+        border-radius: 8px;
+        padding: 6px 10px;
+        font-size: 11px;
+        cursor: pointer;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+      .generate-btn:hover {
+        background: var(--panel-accent);
+        color: #fff;
+      }
     </style>
     <div class="panel">
       <div class="header">
@@ -302,7 +373,7 @@ export function openPanel(): void {
 
   document.documentElement.appendChild(host);
 
-  chrome.storage.local.get([THEME_KEY], (data) => {
+  safeStorageGet([THEME_KEY], (data) => {
     const value = data[THEME_KEY];
     if (value === "system") {
       const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -411,7 +482,10 @@ export function openPanel(): void {
       </label>
       <label>
         <span>値</span>
-        <input class="field-value" type="text" placeholder="入力する値" />
+        <div class="value-row">
+          <input class="field-value" type="text" placeholder="入力する値" />
+          <button class="generate-btn" type="button">生成</button>
+        </div>
       </label>
       <div class="row">
         <select class="field-type">
@@ -432,6 +506,7 @@ export function openPanel(): void {
     const typeSelect = row.querySelector<HTMLSelectElement>(".field-type");
     const pickButton = row.querySelector<HTMLButtonElement>(".pick");
     const removeButton = row.querySelector<HTMLButtonElement>(".remove");
+    const generateButton = row.querySelector<HTMLButtonElement>(".generate-btn");
 
     if (
       !labelInput ||
@@ -439,7 +514,8 @@ export function openPanel(): void {
       !selectorInput ||
       !typeSelect ||
       !pickButton ||
-      !removeButton
+      !removeButton ||
+      !generateButton
     ) {
       return;
     }
@@ -468,6 +544,49 @@ export function openPanel(): void {
       } else {
         setStatus("選択を中止しました");
       }
+    });
+
+    // 生成ボタンのクリックイベント
+    generateButton.addEventListener("click", () => {
+      const fieldType = typeSelect.value as FormPreset["fields"][number]["type"];
+      const label = labelInput.value.trim();
+
+      // ラベルから適切なfakerメソッドを推測
+      let fakerMethod: string | undefined;
+      if (label) {
+        const normalizedLabel = label.toLowerCase().replace(/[^a-z0-9]/g, "");
+        // 簡易的なマッピング（より高度なものはfieldGenerators.tsのgetFakerMethodForFieldを使用）
+        if (normalizedLabel.includes("email") || normalizedLabel.includes("メール")) {
+          fakerMethod = "internet.email";
+        } else if (normalizedLabel.includes("name") || normalizedLabel.includes("名")) {
+          fakerMethod = "person.fullName";
+        } else if (normalizedLabel.includes("first") || normalizedLabel.includes("名前")) {
+          fakerMethod = "person.firstName";
+        } else if (normalizedLabel.includes("last") || normalizedLabel.includes("姓")) {
+          fakerMethod = "person.lastName";
+        } else if (normalizedLabel.includes("phone") || normalizedLabel.includes("電話") || normalizedLabel.includes("携帯")) {
+          fakerMethod = "phone.number";
+        } else if (normalizedLabel.includes("address") || normalizedLabel.includes("住所")) {
+          fakerMethod = "location.streetAddress";
+        } else if (normalizedLabel.includes("zip") || normalizedLabel.includes("postal") || normalizedLabel.includes("郵便")) {
+          fakerMethod = "location.zipCode";
+        } else if (normalizedLabel.includes("company") || normalizedLabel.includes("会社")) {
+          fakerMethod = "company.name";
+        } else if (normalizedLabel.includes("username") || normalizedLabel.includes("ユーザー")) {
+          fakerMethod = "internet.username";
+        } else if (normalizedLabel.includes("password") || normalizedLabel.includes("パスワード")) {
+          fakerMethod = "internet.password";
+        } else if (normalizedLabel.includes("url") || normalizedLabel.includes("website")) {
+          fakerMethod = "internet.url";
+        } else if (normalizedLabel.includes("uuid") || normalizedLabel.includes("id")) {
+          fakerMethod = "string.uuid";
+        }
+      }
+
+      // 値を生成
+      const generatedValue = fakerGenerator.generateByFieldType(fieldType, fakerMethod);
+      valueInput.value = String(generatedValue);
+      setStatus("値を生成しました");
     });
 
     fieldsRoot.appendChild(row);
@@ -529,7 +648,7 @@ export function openPanel(): void {
   };
 
   const loadPresetList = () => {
-    chrome.storage.local.get([PRESETS_KEY], (data) => {
+    safeStorageGet([PRESETS_KEY], (data) => {
       const presets =
         (data[PRESETS_KEY] as Array<{ name: string }> | undefined) ?? [];
       presetSelect.innerHTML = "";
@@ -574,14 +693,14 @@ export function openPanel(): void {
     }
 
     const fields = collectFields();
-    chrome.storage.local.get([PRESETS_KEY], (data) => {
+    safeStorageGet([PRESETS_KEY], (data) => {
       const presets =
         (data[PRESETS_KEY] as
           | Array<{ name: string; fields: typeof fields; autoSubmit: boolean }>
           | undefined) ?? [];
       const next = presets.filter((preset) => preset.name !== name);
       next.push({ name, fields, autoSubmit: autoSubmit.checked });
-      chrome.storage.local.set({ [PRESETS_KEY]: next }, () => {
+      safeStorageSet({ [PRESETS_KEY]: next }, () => {
         setStatus("プリセットを保存しました");
         loadPresetList();
       });
@@ -591,7 +710,7 @@ export function openPanel(): void {
   presetLoad.addEventListener("click", () => {
     const name = presetSelect.value;
     if (!name) return;
-    chrome.storage.local.get([PRESETS_KEY], (data) => {
+    safeStorageGet([PRESETS_KEY], (data) => {
       const presets =
         (data[PRESETS_KEY] as
           | Array<{
@@ -617,11 +736,11 @@ export function openPanel(): void {
   presetDelete.addEventListener("click", () => {
     const name = presetSelect.value;
     if (!name) return;
-    chrome.storage.local.get([PRESETS_KEY], (data) => {
+    safeStorageGet([PRESETS_KEY], (data) => {
       const presets =
         (data[PRESETS_KEY] as Array<{ name: string }> | undefined) ?? [];
       const next = presets.filter((preset) => preset.name !== name);
-      chrome.storage.local.set({ [PRESETS_KEY]: next }, () => {
+      safeStorageSet({ [PRESETS_KEY]: next }, () => {
         setStatus("プリセットを削除しました");
         presetSelect.value = "";
         loadPresetList();
