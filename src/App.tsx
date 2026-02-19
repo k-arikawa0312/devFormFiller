@@ -150,7 +150,7 @@ function App() {
   return (
     <div className="popup">
       <header className="header">
-        <h1>DevFormFiller Pro</h1>
+        <h1>DevFormFiller</h1>
         <p className="subtitle">MVP: 2フィールド注入</p>
       </header>
 

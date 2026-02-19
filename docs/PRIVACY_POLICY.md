@@ -35,7 +35,7 @@ DevFormFiller （以下、「本拡張機能」）は、ウェブフォームの
 - **storage**: プリセットと設定をローカルに保存するため
 - **activeTab**: アクティブなタブのページにコンテンツスクリプトを注入し、フォーム操作を行うため
 - **scripting**: ページにスクリプトを注入してパネル UI を表示するため
-- **host_permissions (http://_/_, https://_/_)**: すべてのウェブサイトでフォーム入力を支援するため
+- **host*permissions (http://*/_, https://_/\_)**: すべてのウェブサイトでフォーム入力を支援するため
 
 ### 6. データの削除
 
@@ -55,7 +55,7 @@ https://github.com/k-arikawa0312/dev-form-filler/issues
 
 ### 1. Introduction
 
-DevFormFiller Pro (hereinafter "the Extension") is a developer tool designed to assist with web form input testing. This Privacy Policy explains how the Extension handles data.
+DevFormFiller (hereinafter "the Extension") is a developer tool designed to assist with web form input testing. This Privacy Policy explains how the Extension handles data.
 
 ### 2. Data Collected
 
@@ -79,7 +79,7 @@ The permissions required by the Extension and their purposes are as follows:
 - **storage**: To store presets and settings locally
 - **activeTab**: To inject content scripts into the active tab and interact with forms
 - **scripting**: To inject scripts to display the panel UI
-- **host_permissions (http://_/_, https://_/_)**: To assist with form input on all websites
+- **host*permissions (http://*/_, https://_/\_)**: To assist with form input on all websites
 
 ### 6. Data Deletion
 
