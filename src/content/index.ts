@@ -5,12 +5,62 @@ import { openPanel } from "./panel";
 import { isChromeExtensionContext, safeStorageGet, safeStorageSet } from "../lib/chromeUtils";
 
 const AUTO_OPEN_KEY = "autoOpenPanel";
+const AUTO_OPEN_SCOPE_KEY = "autoOpenPanelScope";
+const AUTO_OPEN_SITE_LIST_KEY = "autoOpenPanelSiteList";
 let panelOpened = false;
+
+type AutoOpenScope = "all" | "specific";
 
 function ensurePanelOpen() {
   if (panelOpened) return;
   panelOpened = true;
   openPanel();
+}
+
+function parseSiteRules(raw: unknown): string[] {
+  if (typeof raw !== "string") return [];
+  return raw
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+}
+
+function matchSiteRule(pageUrl: URL, rule: string): boolean {
+  if (rule.includes("://")) {
+    try {
+      const target = new URL(rule);
+      return pageUrl.origin === target.origin;
+    } catch {
+      return false;
+    }
+  }
+
+  const host = rule.split("/")[0].toLowerCase();
+  if (!host) return false;
+
+  const currentHost = pageUrl.hostname.toLowerCase();
+  if (host.startsWith("*.")) {
+    const suffix = host.slice(2);
+    return currentHost === suffix || currentHost.endsWith(`.${suffix}`);
+  }
+
+  return currentHost === host;
+}
+
+function shouldAutoOpenOnCurrentPage(scopeRaw: unknown, rulesRaw: unknown): boolean {
+  const scope: AutoOpenScope = scopeRaw === "specific" ? "specific" : "all";
+  if (scope === "all") return true;
+
+  let pageUrl: URL;
+  try {
+    pageUrl = new URL(window.location.href);
+  } catch {
+    return false;
+  }
+
+  const rules = parseSiteRules(rulesRaw);
+  if (rules.length === 0) return false;
+  return rules.some((rule) => matchSiteRule(pageUrl, rule));
 }
 
 function autoOpenIfEnabled() {
@@ -21,13 +71,22 @@ function autoOpenIfEnabled() {
   }
 
   try {
-    safeStorageGet([AUTO_OPEN_KEY], (data) => {
+    safeStorageGet<unknown>(
+      [AUTO_OPEN_KEY, AUTO_OPEN_SCOPE_KEY, AUTO_OPEN_SITE_LIST_KEY],
+      (data) => {
       const value = data[AUTO_OPEN_KEY];
       const enabled = typeof value === "boolean" ? value : true;
-      if (enabled) {
+      if (
+        enabled &&
+        shouldAutoOpenOnCurrentPage(
+          data[AUTO_OPEN_SCOPE_KEY],
+          data[AUTO_OPEN_SITE_LIST_KEY],
+        )
+      ) {
         ensurePanelOpen();
       }
-    });
+      },
+    );
   } catch (e) {
     // エラーの場合はデフォルトでパネルを開く
     console.warn('Failed to access chrome.storage.local:', e);

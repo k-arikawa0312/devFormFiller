@@ -66,6 +66,27 @@ option {
   font-size: 14px;
 }
 
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+}
+
+textarea {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  color: inherit;
+  font: inherit;
+  resize: vertical;
+}
+
+textarea:disabled {
+  opacity: 0.6;
+}
+
 .hint {
   margin: 0;
   font-size: 12px;
