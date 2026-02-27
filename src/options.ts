@@ -32,10 +32,10 @@ if (root) {
           <textarea
             class="auto-open-sites"
             rows="5"
-            placeholder="example.com&#10;*.example.org&#10;https://dev.example.net"
+            placeholder="https://example.com/login&#10;https://dev.example.net/form?mode=new"
           ></textarea>
         </label>
-        <p class="hint">example.com / *.example.org / https://example.com の形式に対応します。</p>
+        <p class="hint">現在ページのURL（アドレスバー）と完全一致する場合のみ自動表示します。</p>
       </section>
 
       <section class="card">

@@ -25,42 +25,14 @@ function parseSiteRules(raw: unknown): string[] {
     .filter((line) => line.length > 0);
 }
 
-function matchSiteRule(pageUrl: URL, rule: string): boolean {
-  if (rule.includes("://")) {
-    try {
-      const target = new URL(rule);
-      return pageUrl.origin === target.origin;
-    } catch {
-      return false;
-    }
-  }
-
-  const host = rule.split("/")[0].toLowerCase();
-  if (!host) return false;
-
-  const currentHost = pageUrl.hostname.toLowerCase();
-  if (host.startsWith("*.")) {
-    const suffix = host.slice(2);
-    return currentHost === suffix || currentHost.endsWith(`.${suffix}`);
-  }
-
-  return currentHost === host;
-}
-
 function shouldAutoOpenOnCurrentPage(scopeRaw: unknown, rulesRaw: unknown): boolean {
   const scope: AutoOpenScope = scopeRaw === "specific" ? "specific" : "all";
   if (scope === "all") return true;
 
-  let pageUrl: URL;
-  try {
-    pageUrl = new URL(window.location.href);
-  } catch {
-    return false;
-  }
-
   const rules = parseSiteRules(rulesRaw);
   if (rules.length === 0) return false;
-  return rules.some((rule) => matchSiteRule(pageUrl, rule));
+  const currentUrl = window.location.href;
+  return rules.some((rule) => rule === currentUrl);
 }
 
 function autoOpenIfEnabled() {
