@@ -5,12 +5,34 @@ import { openPanel } from "./panel";
 import { isChromeExtensionContext, safeStorageGet, safeStorageSet } from "../lib/chromeUtils";
 
 const AUTO_OPEN_KEY = "autoOpenPanel";
+const AUTO_OPEN_SCOPE_KEY = "autoOpenPanelScope";
+const AUTO_OPEN_SITE_LIST_KEY = "autoOpenPanelSiteList";
 let panelOpened = false;
+
+type AutoOpenScope = "all" | "specific";
 
 function ensurePanelOpen() {
   if (panelOpened) return;
   panelOpened = true;
   openPanel();
+}
+
+function parseSiteRules(raw: unknown): string[] {
+  if (typeof raw !== "string") return [];
+  return raw
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+}
+
+function shouldAutoOpenOnCurrentPage(scopeRaw: unknown, rulesRaw: unknown): boolean {
+  const scope: AutoOpenScope = scopeRaw === "specific" ? "specific" : "all";
+  if (scope === "all") return true;
+
+  const rules = parseSiteRules(rulesRaw);
+  if (rules.length === 0) return false;
+  const currentUrl = window.location.href;
+  return rules.some((rule) => rule === currentUrl);
 }
 
 function autoOpenIfEnabled() {
@@ -21,13 +43,22 @@ function autoOpenIfEnabled() {
   }
 
   try {
-    safeStorageGet([AUTO_OPEN_KEY], (data) => {
+    safeStorageGet<unknown>(
+      [AUTO_OPEN_KEY, AUTO_OPEN_SCOPE_KEY, AUTO_OPEN_SITE_LIST_KEY],
+      (data) => {
       const value = data[AUTO_OPEN_KEY];
       const enabled = typeof value === "boolean" ? value : true;
-      if (enabled) {
+      if (
+        enabled &&
+        shouldAutoOpenOnCurrentPage(
+          data[AUTO_OPEN_SCOPE_KEY],
+          data[AUTO_OPEN_SITE_LIST_KEY],
+        )
+      ) {
         ensurePanelOpen();
       }
-    });
+      },
+    );
   } catch (e) {
     // エラーの場合はデフォルトでパネルを開く
     console.warn('Failed to access chrome.storage.local:', e);
