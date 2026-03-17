@@ -23,7 +23,7 @@ export const isChromeExtensionContext = (): boolean => {
  * chrome.storage.local.getの安全なラッパー
  * Chrome Extensionコンテキスト外でもエラーを投げない
  */
-export const safeStorageGet = <T>(keys: string[], callback: (data: Record<string, T>) => void): void => {
+export const safeStorageGet = <T extends string | number | boolean | object>(keys: string[], callback: (data: Record<string, T | undefined>) => void): void => {
   if (!isChromeExtensionContext()) {
     callback({} as Record<string, T>);
     return;
@@ -41,7 +41,7 @@ export const safeStorageGet = <T>(keys: string[], callback: (data: Record<string
  * chrome.storage.local.setの安全なラッパー
  * Chrome Extensionコンテキスト外でもエラーを投げない
  */
-export const safeStorageSet = (data: Record<string, unknown>, callback?: () => void): void => {
+export const safeStorageSet = (data: Record<string, string | number | boolean | object>, callback?: () => void): void => {
   if (!isChromeExtensionContext()) {
     if (callback) callback();
     return;

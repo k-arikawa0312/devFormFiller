@@ -1,6 +1,9 @@
 import { faker } from "@faker-js/faker";
 import { type FieldType } from "./types";
 
+type FakerMethod = () => string | number | boolean | Date | object;
+type FakerValue = string | number | boolean | Date | object | FakerMethod;
+
 /**
  * Faker.js-based random value generator
  * Provides type-safe methods for generating random form data
@@ -15,25 +18,56 @@ export class FakerGenerator {
   generateByMethod(methodPath: string): string | number {
     try {
       const keys = methodPath.split(".");
-      let value: any = faker;
+      let currentValue: object = faker;
 
       for (const key of keys) {
-        if (value && typeof value === "object" && key in value) {
-          value = value[key];
+        if (this.isObjectWithKey(currentValue, key)) {
+          currentValue = currentValue[key] as object;
         } else {
           throw new Error(`Invalid faker method path: ${methodPath}`);
         }
       }
 
-      if (typeof value === "function") {
-        return value();
+      if (this.isCallable(currentValue)) {
+        const result = currentValue();
+        return this.coerceToStringOrNumber(result);
       }
 
-      return value;
+      return this.coerceToStringOrNumber(currentValue);
     } catch (error) {
       console.error(`Error generating value for ${methodPath}:`, error);
       return "";
     }
+  }
+
+  /**
+   * Type guard to check if value is an object with the given key
+   */
+  private isObjectWithKey(value: object, key: string): value is Record<string, object> {
+    return value !== null && typeof value === "object" && key in value;
+  }
+
+  /**
+   * Type guard to check if value is callable
+   */
+  private isCallable(value: object): value is FakerMethod {
+    return typeof value === "function";
+  }
+
+  /**
+   * Coerce value to string or number
+   */
+  private coerceToStringOrNumber(value: FakerValue): string | number {
+    if (typeof value === "string" || typeof value === "number") {
+      return value;
+    }
+    if (typeof value === "boolean") {
+      return value ? "true" : "false";
+    }
+    if (value instanceof Date) {
+      return value.toISOString().split("T")[0];
+    }
+    return String(value);
   }
 
   /**

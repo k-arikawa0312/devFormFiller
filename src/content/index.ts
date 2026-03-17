@@ -17,7 +17,7 @@ function ensurePanelOpen() {
   openPanel();
 }
 
-function parseSiteRules(raw: unknown): string[] {
+function parseSiteRules(raw: string | boolean | undefined | null): string[] {
   if (typeof raw !== "string") return [];
   return raw
     .split(/\r?\n/)
@@ -25,7 +25,7 @@ function parseSiteRules(raw: unknown): string[] {
     .filter((line) => line.length > 0);
 }
 
-function shouldAutoOpenOnCurrentPage(scopeRaw: unknown, rulesRaw: unknown): boolean {
+function shouldAutoOpenOnCurrentPage(scopeRaw: string | boolean | undefined, rulesRaw: string | boolean | undefined): boolean {
   const scope: AutoOpenScope = scopeRaw === "specific" ? "specific" : "all";
   if (scope === "all") return true;
 
@@ -43,9 +43,9 @@ function autoOpenIfEnabled() {
   }
 
   try {
-    safeStorageGet<unknown>(
+    safeStorageGet<string | boolean>(
       [AUTO_OPEN_KEY, AUTO_OPEN_SCOPE_KEY, AUTO_OPEN_SITE_LIST_KEY],
-      (data) => {
+      (data: Record<string, string | boolean | undefined>) => {
       const value = data[AUTO_OPEN_KEY];
       const enabled = typeof value === "boolean" ? value : true;
       if (

@@ -290,13 +290,13 @@ function buildValue(rule: FieldRule): string {
   return "";
 }
 
-function resolveFakerMethod(path: string): unknown {
+function resolveFakerMethod(path: string): object | undefined {
   const segments = path.split(".").map((part) => part.trim());
-  let current: unknown = faker;
+  let current: object = faker;
   for (const segment of segments) {
     if (!segment) return undefined;
     if (typeof current !== "object" || current === null) return undefined;
-    current = (current as Record<string, unknown>)[segment];
+    current = (current as Record<string, object>)[segment];
   }
   return current;
 }
