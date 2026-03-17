@@ -43,14 +43,14 @@ export class FakerGenerator {
   /**
    * Type guard to check if value is an object with the given key
    */
-  private isObjectWithKey(value: object, key: string): value is Record<string, unknown> {
+  private isObjectWithKey(value: object, key: string): value is Record<string, object> {
     return value !== null && typeof value === "object" && key in value;
   }
 
   /**
    * Type guard to check if value is callable
    */
-  private isCallable(value: unknown): value is FakerMethod {
+  private isCallable(value: object): value is FakerMethod {
     return typeof value === "function";
   }
 
